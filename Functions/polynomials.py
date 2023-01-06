@@ -1,7 +1,15 @@
+import sys
 import numpy as np
 import tkinter as tk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+# TODO: find out how TF can I add a group of sliders that change dynamically
+widgets = {
+    "Polynomial": ["slider_degree", "coefficients"],
+    "RealExponential": ["slider_amplitude", "slider_exponent"],
+    "Sinusoid": ["slider_amplitude", "slider_frequency", "slider_phase"],
+}
 
 
 # Validator for the 'Degree' input
@@ -27,6 +35,46 @@ def polynomial(x, N: int):
     return y
 
 
+def real_exponential(x, C: float, a: float):
+    return C * np.e ** (a * x)
+
+
+def sinusoid(x, A: float, w_0: float, phi: float):
+    return A * np.cos(w_0 * x + phi)
+
+
+class MenuBar(tk.Menu):
+    def __init__(self, root, *args, **kwargs):
+        tk.Menu.__init__(self, root, *args, **kwargs)
+
+        self.root = root
+
+        # Main menu
+        self.file_menu = tk.Menu(self, tearoff=0)
+
+        # Exit button
+        self.add_command(label="Exit", command=self.on_close)
+
+        # Functions cascade button
+        self.add_cascade(label="Functions", menu=self.file_menu)
+        self.file_menu.add_command(
+            label="Polynomials", command=self.root.on_polynomial_selected, underline=1
+        )
+        self.file_menu.add_command(
+            label="Exponential",
+            command=self.root.on_exponential_selected,
+        )
+        self.file_menu.add_command(
+            label="Sinusoids", command=self.root.on_sinusoids_selected
+        )
+
+    def on_open(self):
+        print("This shit is openning")
+
+    def on_close(self):
+        sys.exit(0)
+
+
 class App(tk.Tk):
     def __init__(self, title: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -34,17 +82,19 @@ class App(tk.Tk):
         self.title(title)
         self.resizable(False, False)
 
-        # App title (TOP CENTER)
-        self.label_title = tk.Label(
-            self, text="Polynomial Functions", font=("Arial", 18)
-        )
+        # === App title (TOP CENTER)
+        self.label_title = tk.Label(self, text="Polynomial", font=("Arial", 18))
         self.label_title.grid(row=0, column=0, columnspan=2)
 
-        # Equation that's being plotted
+        # === Equation that's being plotted
         self.label_plotted_equation = tk.Label(
             self, text=r"$x^2 + x + 1$", font=("Arial", 15)
         )
         self.label_plotted_equation.grid(row=1, column=0, columnspan=2)
+
+        # === Menu bar
+        self.menu_bar = MenuBar(self)
+        self.config(menu=self.menu_bar)
 
         # === Matplotlib setup
         self.graph = plt.figure()
@@ -73,15 +123,12 @@ class App(tk.Tk):
         self.calculate_btn.grid(row=3, column=0)
 
         self.label_polynomial_degree = tk.Label(self, text="Degree")
-        self.label_polynomial_degree.grid(row=3, column=1)
+        self.label_polynomial_degree.grid(row=4, column=1)
 
         self.entry_polynomial_degree = tk.Entry(
             self, validate="key", validatecommand=(self.register(only_numbers), "%S")
         )
-        self.entry_polynomial_degree.grid(row=4, column=1)
-
-        # self.label_polynomial_degree = tk.Label(self, text="Coefficients")
-        # self.label_polynomial_degree.grid(row=5, column=1)
+        self.entry_polynomial_degree.grid(row=5, column=1)
 
     def handle_calculate_btn(self):
         polynomial_degree = self.entry_polynomial_degree.get()
@@ -98,6 +145,45 @@ class App(tk.Tk):
         self.setup_canvas()
 
         # Paint the new graph using the new values of the y-axis
+        self.graph_it()
+
+    def on_exponential_selected(self):
+        self.label_title.config(text="Real exponential")
+
+        self.subplot.clear()
+
+        y_x = real_exponential(self.time_vector, 1, 1)
+
+        self.subplot.plot(self.time_vector, y_x)
+
+        self.setup_canvas()
+
+        self.graph_it()
+
+    def on_polynomial_selected(self):
+        self.label_title.config(text="Polynomial")
+
+        self.subplot.clear()
+
+        y_x = polynomial(self.time_vector, 1)
+
+        self.subplot.plot(self.time_vector, y_x)
+
+        self.setup_canvas()
+
+        self.graph_it()
+
+    def on_sinusoids_selected(self):
+        self.label_title.config(text="Sinudoid")
+
+        self.subplot.clear()
+
+        y_x = sinusoid(self.time_vector, 1, 2 * np.pi * 0.1, 0)
+
+        self.subplot.plot(self.time_vector, y_x)
+
+        self.setup_canvas()
+
         self.graph_it()
 
     def graph_it(self):
